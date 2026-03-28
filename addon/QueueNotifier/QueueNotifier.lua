@@ -2,7 +2,6 @@ QueueNotifierDB = QueueNotifierDB or {}
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PVPQUEUE_ANYWHERE_SHOW")
-frame:RegisterEvent("PVPQUEUE_ANYWHERE_HIDE")
 frame:RegisterEvent("PLAYER_LOGIN")
 
 frame:SetScript("OnEvent", function(self, event)
@@ -14,7 +13,5 @@ frame:SetScript("OnEvent", function(self, event)
         QueueNotifierDB.status = "popped"
         print("|cff00ff00[QueueNotifier]|r Queue popped! Notification sent.")
 
-    elseif event == "PVPQUEUE_ANYWHERE_HIDE" then
-        QueueNotifierDB.status = "closed"
     end
 end)
