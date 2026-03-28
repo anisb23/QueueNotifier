@@ -48,7 +48,14 @@ C:\Program Files (x86)\World of Warcraft\_retail_\Interface\AddOns\
 
 Launch WoW, go to the **AddOns** menu on the character select screen, and enable **Queue Notifier**.
 
-> If WoW flags the addon as out of date, run `/run print(GetBuildInfo())` in-game and update the interface number on line 1 of `QueueNotifier.toc`.
+> If WoW flags the addon as out of date, run `/run print(GetBuildInfo())` in-game. It will print something like:
+> ```
+> 12.0.1 66709 Mar 27 2026 120001
+> ```
+> Take the **last number** (`120001`) and update the interface number on line 1 of `QueueNotifier.toc`:
+> ```
+> ## Interface-Retail: 120001
+> ```
 
 ---
 
