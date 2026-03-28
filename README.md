@@ -22,7 +22,7 @@
    ```
    https://api.telegram.org/bot123456789:ABC-abc_abcd/getUpdates
    ```
-6. Find the `"id"` field inside `"chat"` — this is your **Chat ID**
+6. Find the `"id"` field inside `"chat"` — this is your **Chat ID** (_If you see an empty response although you have sent a message to your bot then wait a couple of minutes for it to update_)
 
 ---
 
