@@ -1,0 +1,54 @@
+# QueueNotifier — Installation Guide
+
+## Requirements
+
+- World of Warcraft (Retail)
+- [Python 3.8+](https://www.python.org/downloads/)
+- A Telegram account
+
+---
+
+## Step 1 — Create a Telegram Bot
+
+1. Open Telegram and message **@BotFather**
+2. Send `/newbot` and follow the prompts
+3. Copy the **bot token** it gives you (e.g. `123456789:ABC-abc...`)
+4. Send any message to your new bot, then open this URL in a browser:
+   ```
+   https://api.telegram.org/botTOKEN/getUpdates
+   ```
+5. Find the `"id"` field inside `"chat"` — this is your **Chat ID**
+
+---
+
+## Step 2 — Install the WoW Addon
+
+Copy the `addon/QueueNotifier/` folder into your AddOns directory:
+
+**macOS**
+```
+/Applications/World of Warcraft/_retail_/Interface/AddOns/
+```
+
+**Windows**
+```
+C:\Program Files (x86)\World of Warcraft\_retail_\Interface\AddOns\
+```
+
+Launch WoW, go to the **AddOns** menu on the character select screen, and enable **Queue Notifier**.
+
+> If WoW flags the addon as out of date, run `/run print(GetBuildInfo())` in-game and update the interface number on line 1 of `QueueNotifier.toc`.
+
+---
+
+## Step 3 — Run the Companion App
+
+```bash
+cd companion
+pip install -r requirements.txt
+python main.py
+```
+
+On first launch you will be prompted for your bot token and chat ID. The app will auto-detect your WoW installation, send a test message to confirm everything works, and save your config for future runs.
+
+Leave the companion app running in the background while you play. Press `Ctrl+C` to stop it.
