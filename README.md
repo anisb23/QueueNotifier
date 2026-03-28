@@ -12,12 +12,17 @@
 
 1. Open Telegram and message **@BotFather**
 2. Send `/newbot` and follow the prompts
-3. Copy the **bot token** it gives you (e.g. `123456789:ABC-abc...`)
-4. Send any message to your new bot, then open this URL in a browser:
+3. Copy the **bot token** it gives you (e.g. `123456789:ABC-abc_abcd`)
+4. Send any message to your new bot through Telegram.
+5. Open this URL in a browser:
    ```
-   https://api.telegram.org/botTOKEN/getUpdates
+   https://api.telegram.org/bot{TOKEN_FROM_STEP_3}/getUpdates
    ```
-5. Find the `"id"` field inside `"chat"` — this is your **Chat ID**
+   For example the URL would look like (keep 'bot' in the url and add the token right next to it):
+   ```
+   https://api.telegram.org/bot123456789:ABC-abc_abcd/getUpdates
+   ```
+6. Find the `"id"` field inside `"chat"` — this is your **Chat ID**
 
 ---
 
