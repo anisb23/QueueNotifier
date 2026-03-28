@@ -1,4 +1,4 @@
-## Interface-Retail: 110107
+## Interface-Retail: 120001
 ## Title: Queue Notifier
 ## Notes: Writes a timestamp to SavedVariables when your PvP queue pops, enabling external notification tools.
 ## Author:

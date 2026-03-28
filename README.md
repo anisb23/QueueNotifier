@@ -1,5 +1,11 @@
 # QueueNotifier — Installation Guide
 
+## Download
+
+Click the green **Code** button at the top of this page and select **Download ZIP**. Extract the ZIP to a folder of your choice.
+
+---
+
 ## Requirements
 
 - World of Warcraft (Retail)
