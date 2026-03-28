@@ -43,12 +43,11 @@ Launch WoW, go to the **AddOns** menu on the character select screen, and enable
 
 ## Step 3 — Run the Companion App
 
-```bash
-cd companion
-pip install -r requirements.txt
-python main.py
-```
+**macOS** — double-click `run_mac.command`
+> On first run, right-click → Open to bypass Gatekeeper.
+
+**Windows** — double-click `run_windows.bat`
 
 On first launch you will be prompted for your bot token and chat ID. The app will auto-detect your WoW installation, send a test message to confirm everything works, and save your config for future runs.
 
-Leave the companion app running in the background while you play. Press `Ctrl+C` to stop it.
+Leave the companion app running in the background while you play.
