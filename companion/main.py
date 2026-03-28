@@ -157,13 +157,16 @@ def main():
     print("Queue Notifier is running. Press Ctrl+C to stop.\n")
 
     last_known = read_last_pop(saved_vars)
+    print(f"Initial lastPop value: {last_known}\n")
 
     while True:
         try:
             current = read_last_pop(saved_vars)
+            timestamp = time.strftime("%H:%M:%S")
+            print(f"[{timestamp}] lastPop = {current}", end="\r")
+
             if current is not None and current != last_known:
-                timestamp = time.strftime("%H:%M:%S")
-                print(f"[{timestamp}] Queue popped — sending Telegram notification...")
+                print(f"\n[{timestamp}] Change detected — sending Telegram notification...")
                 try:
                     send_message(token, chat_id, f"Your Arena queue has popped! Accept it!")
                     print(f"[{timestamp}] Notification sent.")
