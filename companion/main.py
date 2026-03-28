@@ -42,7 +42,7 @@ def find_wow_account_dir():
     return None
 
 def pick_account(account_dir):
-    accounts = [d for d in account_dir.iterdir() if d.is_dir()]
+    accounts = [d for d in account_dir.iterdir() if d.is_dir() and d.name != "SavedVariables"]
     if not accounts:
         return None
     if len(accounts) == 1:
