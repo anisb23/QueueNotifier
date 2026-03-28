@@ -28,7 +28,7 @@
 
 ## Step 2 — Install the WoW Addon
 
-Copy the `addon/QueueNotifier/` folder into your AddOns directory:
+From the `addon` folder, copy the `QueueNotifier` folder into your WoW AddOns directory:
 
 **macOS**
 ```
