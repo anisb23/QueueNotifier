@@ -120,7 +120,7 @@ def setup():
 def read_last_pop(path):
     try:
         content = Path(path).read_text(encoding="utf-8")
-        match = re.search(r'lastPop\s*=\s*(\d+)', content)
+        match = re.search(r'"lastPop"\s*\]\s*=\s*(\d+)', content)
         return int(match.group(1)) if match else None
     except FileNotFoundError:
         return None
