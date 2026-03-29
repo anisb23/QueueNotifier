@@ -148,12 +148,31 @@ class App:
         self.toggle_btn = tk.Button(btn_frame, text="Start", width=12, command=self.toggle, bg="#4CAF50", fg="white")
         self.toggle_btn.pack(side="left", padx=5)
 
+        # Warning
+        self.warning_var = tk.StringVar()
+        self.warning_label = tk.Label(root, textvariable=self.warning_var, fg="orange")
+        self.warning_label.grid(row=4, column=0, columnspan=2)
+
         # Status
         self.status_var = tk.StringVar(value="Stopped")
         self.status_label = tk.Label(root, textvariable=self.status_var, fg="gray")
-        self.status_label.grid(row=4, column=0, columnspan=2, pady=(0, 10))
+        self.status_label.grid(row=5, column=0, columnspan=2, pady=(0, 10))
+
+        self.token_var.trace_add("write", lambda *_: self.validate_fields())
+        self.chat_id_var.trace_add("write", lambda *_: self.validate_fields())
+        self.path_var.trace_add("write", lambda *_: self.validate_fields())
+        self.validate_fields()
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def validate_fields(self):
+        missing = not self.token_var.get().strip() or not self.chat_id_var.get().strip() or not self.path_var.get().strip()
+        if missing:
+            self.toggle_btn.config(state="disabled")
+            self.warning_var.set("Please fill in all fields before starting.")
+        else:
+            self.toggle_btn.config(state="normal")
+            self.warning_var.set("")
 
     def save(self):
         config = {
