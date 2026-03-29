@@ -9,13 +9,15 @@ frame:SetScript("OnEvent", function(self, event)
         print("|cff00ccff[QueueNotifier]|r Loaded. Waiting for queue pop...")
 
     elseif event == "UPDATE_BATTLEFIELD_STATUS" then
-        for i = 1, MAX_BATTLEFIELD_QUEUES do
+        for i = 1, GetMaxBattlefieldID() do
             local status, _, _, _, _, _, _, _, _, _, _, isSoloQueue = GetBattlefieldStatus(i)
-            if status == "confirm" and isSoloQueue then
+            if status == "confirm" and isSoloQueue and not QueueNotifierDB.confirming then
                 QueueNotifierDB.lastPop = time()
                 QueueNotifierDB.status = "popped"
+                QueueNotifierDB.confirming = true
                 print("|cff00ff00[QueueNotifier]|r Solo Shuffle queue popped! Notification sent.")
-                break
+            elseif status ~= "confirm" then
+                QueueNotifierDB.confirming = false
             end
         end
 
