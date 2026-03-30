@@ -9,28 +9,21 @@ frame:SetScript("OnEvent", function(self, event)
     end
 end)
 
+local function sendNotification()
+    local originalFormat = GetCVar("screenshotFormat")
+    if originalFormat ~= "tga" then
+        SetCVar("screenshotFormat", "tga")
+    else
+        originalFormat = "jpeg"
+    end
+    Screenshot()
+    SetCVar("screenshotFormat", originalFormat)
+end
+
 hooksecurefunc("PVPReadyDialog_Display", function(_, battlefieldId)
-    local status, mapName, teamSize, registeredMatch, suspendedQueue, queueType, gameType, role, asGroup, shortDescription, longDescription, isSoloQueue = GetBattlefieldStatus(battlefieldId)
-
-    print("|cffff9900[QueueNotifier DEBUG]|r PVPReadyDialog_Display fired!")
-    print("|cffff9900[QueueNotifier DEBUG]|r battlefieldId=" .. tostring(battlefieldId))
-    print("|cffff9900[QueueNotifier DEBUG]|r status=" .. tostring(status))
-    print("|cffff9900[QueueNotifier DEBUG]|r mapName=" .. tostring(mapName))
-    print("|cffff9900[QueueNotifier DEBUG]|r teamSize=" .. tostring(teamSize))
-    print("|cffff9900[QueueNotifier DEBUG]|r queueType=" .. tostring(queueType))
-    print("|cffff9900[QueueNotifier DEBUG]|r gameType=" .. tostring(gameType))
-    print("|cffff9900[QueueNotifier DEBUG]|r isSoloQueue=" .. tostring(isSoloQueue))
-
-    QueueNotifierDB.lastPop = time()
-    QueueNotifierDB.status = "popped"
-    QueueNotifierDB.debug = {
-        battlefieldId = battlefieldId,
-        status = status,
-        mapName = mapName,
-        teamSize = teamSize,
-        queueType = queueType,
-        gameType = gameType,
-        isSoloQueue = isSoloQueue,
-    }
-    print("|cff00ff00[QueueNotifier]|r Queue popped! Notification sent.")
+    local status, _, _, _, _, queueType = GetBattlefieldStatus(battlefieldId)
+    if status == "confirm" and queueType == "RATEDSHUFFLE" then
+        print("|cff00ff00[QueueNotifier]|r Solo Shuffle queue popped! Notification sent.")
+        sendNotification()
+    end
 end)

@@ -1,5 +1,5 @@
 import json
-import re
+import os
 import sys
 import time
 import threading
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import requests
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import PatternMatchingEventHandler
 
 CONFIG_FILE = Path(__file__).parent / "config.json"
 
@@ -31,24 +31,18 @@ def save_config(config):
 # WoW path detection
 # ──────────────────────────────────────────────
 
-def find_saved_vars():
+def find_screenshots_path():
     if sys.platform == "darwin":
-        account_root = Path("/Applications/World of Warcraft/_retail_/WTF/Account")
+        path = Path("/Applications/World of Warcraft/_retail_/Screenshots")
     else:
         for base in [
-            Path(r"C:\Program Files (x86)\World of Warcraft\_retail_\WTF\Account"),
-            Path(r"C:\Program Files\World of Warcraft\_retail_\WTF\Account"),
+            Path(r"C:\Program Files (x86)\World of Warcraft\_retail_\Screenshots"),
+            Path(r"C:\Program Files\World of Warcraft\_retail_\Screenshots"),
         ]:
             if base.exists():
-                account_root = base
-                break
-        else:
-            return ""
-
-    accounts = [d for d in account_root.iterdir() if d.is_dir() and d.name != "SavedVariables"]
-    if not accounts:
+                return str(base)
         return ""
-    return str(accounts[0] / "SavedVariables" / "QueueNotifier.lua")
+    return str(path) if path.exists() else ""
 
 # ──────────────────────────────────────────────
 # Telegram
@@ -63,43 +57,27 @@ def send_message(token, chat_id, text):
     response.raise_for_status()
 
 # ──────────────────────────────────────────────
-# SavedVariables parsing
+# Screenshot watcher
 # ──────────────────────────────────────────────
 
-def read_last_pop(path):
-    try:
-        content = Path(path).read_text(encoding="utf-8")
-        match = re.search(r'"lastPop"\s*\]\s*=\s*(\d+)', content)
-        return int(match.group(1)) if match else None
-    except FileNotFoundError:
-        return None
-    except Exception:
-        return None
-
-# ──────────────────────────────────────────────
-# File watcher
-# ──────────────────────────────────────────────
-
-class SavedVarsHandler(FileSystemEventHandler):
-    def __init__(self, saved_vars, token, chat_id, on_notification):
-        self.saved_vars = str(Path(saved_vars).resolve())
+class ScreenshotHandler(PatternMatchingEventHandler):
+    def __init__(self, token, chat_id, on_notification):
+        super().__init__(patterns=["*.tga"], ignore_directories=True, case_sensitive=False)
         self.token = token
         self.chat_id = chat_id
         self.on_notification = on_notification
-        self.last_known = read_last_pop(saved_vars)
 
-    def on_modified(self, event):
-        if str(Path(event.src_path).resolve()) != self.saved_vars:
-            return
-        current = read_last_pop(self.saved_vars)
-        if current is not None and current != self.last_known:
-            self.last_known = current
-            timestamp = time.strftime("%H:%M:%S")
-            try:
-                send_message(self.token, self.chat_id, "Your Solo Shuffle queue has popped! Accept it!")
-                self.on_notification(f"[{timestamp}] Notification sent.")
-            except Exception as e:
-                self.on_notification(f"[{timestamp}] Failed to send: {e}")
+    def on_created(self, event):
+        timestamp = time.strftime("%H:%M:%S")
+        try:
+            send_message(self.token, self.chat_id, "Your Solo Shuffle queue has popped! Accept it!")
+            self.on_notification(f"[{timestamp}] Notification sent.")
+        except Exception as e:
+            self.on_notification(f"[{timestamp}] Failed to send: {e}")
+        try:
+            os.remove(event.src_path)
+        except Exception:
+            pass
 
 # ──────────────────────────────────────────────
 # UI
@@ -128,9 +106,9 @@ class App:
         self.chat_id_entry = tk.Entry(root, textvariable=self.chat_id_var, width=50)
         self.chat_id_entry.grid(row=1, column=1, **pad)
 
-        # SavedVariables path
-        tk.Label(root, text="QueueNotifier.lua path:").grid(row=2, column=0, sticky="w", **pad)
-        detected = self.config.get("saved_vars_path", "") or find_saved_vars()
+        # Screenshots path
+        tk.Label(root, text="WoW Screenshots path:").grid(row=2, column=0, sticky="w", **pad)
+        detected = self.config.get("screenshots_path", "") or find_screenshots_path()
         self.path_var = tk.StringVar(value=detected)
         self.path_entry = tk.Entry(root, textvariable=self.path_var, width=50)
         self.path_entry.grid(row=2, column=1, **pad)
@@ -178,7 +156,7 @@ class App:
         config = {
             "bot_token": self.token_var.get().strip(),
             "chat_id": self.chat_id_var.get().strip(),
-            "saved_vars_path": self.path_var.get().strip(),
+            "screenshots_path": self.path_var.get().strip(),
         }
         save_config(config)
         self.config = config
@@ -205,15 +183,17 @@ class App:
     def start_watcher(self):
         token = self.token_var.get().strip()
         chat_id = self.chat_id_var.get().strip()
-        saved_vars = self.path_var.get().strip()
+        screenshots_path = self.path_var.get().strip()
 
-        if not token or not chat_id or not saved_vars:
+        if not token or not chat_id or not screenshots_path:
             messagebox.showwarning("Missing fields", "Please fill in all fields before starting.")
             return
 
-        handler = SavedVarsHandler(saved_vars, token, chat_id, self.set_status)
+        Path(screenshots_path).mkdir(parents=True, exist_ok=True)
+
+        handler = ScreenshotHandler(token, chat_id, self.set_status)
         self.observer = Observer()
-        self.observer.schedule(handler, path=str(Path(saved_vars).parent), recursive=False)
+        self.observer.schedule(handler, path=screenshots_path, recursive=False)
         self.observer.start()
 
         self.toggle_btn.config(text="Stop", bg="#f44336")
