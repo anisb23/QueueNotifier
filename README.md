@@ -10,25 +10,33 @@ Click the green **Code** button at the top of this page and select **Download ZI
 
 - World of Warcraft (Retail)
 - [Python 3.8+](https://www.python.org/downloads/)
-- A Telegram account
+- A Telegram account and/or a Discord server
 
 ---
 
-## Step 1 — Create a Telegram Bot
+## Step 1 — Set Up Notifications
+
+You can use **Telegram**, **Discord**, or both. At least one is required.
+
+### Telegram
 
 1. Open Telegram and message **@BotFather**
 2. Send `/newbot` and follow the prompts
 3. Copy the **bot token** it gives you (e.g. `123456789:ABC-abc_abcd`)
-4. Send any message to your new bot through Telegram.
-5. Open this URL in a browser:
+4. Send any message to your new bot
+5. Open this URL in a browser (replace `TOKEN` with your token):
    ```
-   https://api.telegram.org/bot{TOKEN_FROM_STEP_3}/getUpdates
+   https://api.telegram.org/botTOKEN/getUpdates
    ```
-   For example the URL would look like (keep 'bot' in the url and add the token right next to it):
-   ```
-   https://api.telegram.org/bot123456789:ABC-abc_abcd/getUpdates
-   ```
-6. Find the `"id"` field inside `"chat"` — this is your **Chat ID** (_If you see an empty response although you have sent a message to your bot then wait a couple of minutes for it to update_)
+6. Find the `"id"` field inside `"chat"` — this is your **Chat ID**
+
+> If you see an empty response, wait a minute and try again after sending another message to your bot.
+
+### Discord
+
+1. Open Discord and go to the channel you want to receive notifications in
+2. Click **Edit Channel** → **Integrations** → **Webhooks** → **New Webhook**
+3. Copy the **Webhook URL**
 
 ---
 
@@ -66,6 +74,6 @@ Launch WoW, go to the **AddOns** menu on the character select screen, and enable
 
 **Windows** — double-click `run_windows.bat`
 
-On first launch you will be prompted for your bot token and chat ID. The app will auto-detect your WoW installation, send a test message to confirm everything works, and save your config for future runs.
+The app will open a window where you can enter your Telegram and/or Discord credentials. Use the **Send Test** button next to each service to confirm they are working, then click **Save** and **Start**.
 
 Leave the companion app running in the background while you play.

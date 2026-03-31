@@ -2,7 +2,6 @@ import json
 import os
 import sys
 import time
-import threading
 import tkinter as tk
 from tkinter import messagebox
 from pathlib import Path
@@ -34,21 +33,20 @@ def save_config(config):
 def find_screenshots_path():
     if sys.platform == "darwin":
         path = Path("/Applications/World of Warcraft/_retail_/Screenshots")
-    else:
-        for base in [
-            Path(r"C:\Program Files (x86)\World of Warcraft\_retail_\Screenshots"),
-            Path(r"C:\Program Files\World of Warcraft\_retail_\Screenshots"),
-        ]:
-            if base.exists():
-                return str(base)
-        return ""
-    return str(path) if path.exists() else ""
+        return str(path) if path.exists() else ""
+    for base in [
+        Path(r"C:\Program Files (x86)\World of Warcraft\_retail_\Screenshots"),
+        Path(r"C:\Program Files\World of Warcraft\_retail_\Screenshots"),
+    ]:
+        if base.exists():
+            return str(base)
+    return ""
 
 # ──────────────────────────────────────────────
-# Telegram
+# Notifications
 # ──────────────────────────────────────────────
 
-def send_message(token, chat_id, text):
+def send_telegram(token, chat_id, text):
     response = requests.post(
         f"https://api.telegram.org/bot{token}/sendMessage",
         json={"chat_id": chat_id, "text": text},
@@ -56,21 +54,49 @@ def send_message(token, chat_id, text):
     )
     response.raise_for_status()
 
+def send_discord(webhook_url, text):
+    response = requests.post(
+        webhook_url,
+        json={"content": text},
+        timeout=10,
+    )
+    response.raise_for_status()
+
+def send_notifications(config, text):
+    errors = []
+    token = config.get("bot_token", "").strip()
+    chat_id = config.get("chat_id", "").strip()
+    webhook_url = config.get("discord_webhook", "").strip()
+
+    if token and chat_id:
+        try:
+            send_telegram(token, chat_id, text)
+        except Exception as e:
+            errors.append(f"Telegram: {e}")
+
+    if webhook_url:
+        try:
+            send_discord(webhook_url, text)
+        except Exception as e:
+            errors.append(f"Discord: {e}")
+
+    if errors:
+        raise Exception(" | ".join(errors))
+
 # ──────────────────────────────────────────────
 # Screenshot watcher
 # ──────────────────────────────────────────────
 
 class ScreenshotHandler(PatternMatchingEventHandler):
-    def __init__(self, token, chat_id, on_notification):
+    def __init__(self, config, on_notification):
         super().__init__(patterns=["*.tga"], ignore_directories=True, case_sensitive=False)
-        self.token = token
-        self.chat_id = chat_id
+        self.config = config
         self.on_notification = on_notification
 
     def on_created(self, event):
         timestamp = time.strftime("%H:%M:%S")
         try:
-            send_message(self.token, self.chat_id, "Your Solo Shuffle queue has popped! Accept it!")
+            send_notifications(self.config, "Your Solo Shuffle queue has popped! Accept it!")
             self.on_notification(f"[{timestamp}] Notification sent.")
         except Exception as e:
             self.on_notification(f"[{timestamp}] Failed to send: {e}")
@@ -92,62 +118,74 @@ class App:
         self.observer = None
         self.config = load_config()
 
-        pad = {"padx": 10, "pady": 5}
+        pad = {"padx": 10, "pady": 4}
 
-        # Bot Token
-        tk.Label(root, text="Telegram Bot Token:").grid(row=0, column=0, sticky="w", **pad)
+        # ── Telegram ──────────────────────────
+        telegram_frame = tk.LabelFrame(root, text="Telegram", padx=8, pady=6)
+        telegram_frame.grid(row=0, column=0, columnspan=2, sticky="ew", padx=10, pady=(10, 4))
+
+        tk.Label(telegram_frame, text="Bot Token:").grid(row=0, column=0, sticky="w")
         self.token_var = tk.StringVar(value=self.config.get("bot_token", ""))
-        self.token_entry = tk.Entry(root, textvariable=self.token_var, width=50)
-        self.token_entry.grid(row=0, column=1, **pad)
+        tk.Entry(telegram_frame, textvariable=self.token_var, width=50).grid(row=0, column=1, padx=(8, 0), pady=3)
 
-        # Chat ID
-        tk.Label(root, text="Telegram Chat ID:").grid(row=1, column=0, sticky="w", **pad)
+        tk.Label(telegram_frame, text="Chat ID:").grid(row=1, column=0, sticky="w")
         self.chat_id_var = tk.StringVar(value=self.config.get("chat_id", ""))
-        self.chat_id_entry = tk.Entry(root, textvariable=self.chat_id_var, width=50)
-        self.chat_id_entry.grid(row=1, column=1, **pad)
+        tk.Entry(telegram_frame, textvariable=self.chat_id_var, width=50).grid(row=1, column=1, padx=(8, 0), pady=3)
 
-        # Screenshots path
+        self.test_telegram_btn = tk.Button(telegram_frame, text="Send Test", command=self.test_telegram)
+        self.test_telegram_btn.grid(row=2, column=1, sticky="e", pady=(4, 0))
+
+        # ── Discord ───────────────────────────
+        discord_frame = tk.LabelFrame(root, text="Discord", padx=8, pady=6)
+        discord_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=4)
+
+        tk.Label(discord_frame, text="Webhook URL:").grid(row=0, column=0, sticky="w")
+        self.discord_var = tk.StringVar(value=self.config.get("discord_webhook", ""))
+        tk.Entry(discord_frame, textvariable=self.discord_var, width=50).grid(row=0, column=1, padx=(8, 0), pady=3)
+
+        self.test_discord_btn = tk.Button(discord_frame, text="Send Test", command=self.test_discord)
+        self.test_discord_btn.grid(row=1, column=1, sticky="e", pady=(4, 0))
+
+        # ── WoW Path ──────────────────────────
         tk.Label(root, text="WoW Screenshots path:").grid(row=2, column=0, sticky="w", **pad)
         detected = self.config.get("screenshots_path", "") or find_screenshots_path()
         self.path_var = tk.StringVar(value=detected)
-        self.path_entry = tk.Entry(root, textvariable=self.path_var, width=50)
-        self.path_entry.grid(row=2, column=1, **pad)
+        tk.Entry(root, textvariable=self.path_var, width=50).grid(row=2, column=1, **pad)
 
-        # Buttons
+        # ── Buttons ───────────────────────────
         btn_frame = tk.Frame(root)
         btn_frame.grid(row=3, column=0, columnspan=2, pady=10)
 
-        self.save_btn = tk.Button(btn_frame, text="Save", width=12, command=self.save)
-        self.save_btn.pack(side="left", padx=5)
-
-        self.test_btn = tk.Button(btn_frame, text="Send Test", width=12, command=self.send_test)
-        self.test_btn.pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Save", width=12, command=self.save).pack(side="left", padx=5)
 
         self.toggle_btn = tk.Button(btn_frame, text="Start", width=12, command=self.toggle, bg="#4CAF50", fg="white")
         self.toggle_btn.pack(side="left", padx=5)
 
-        # Warning
+        # ── Warning & Status ──────────────────
         self.warning_var = tk.StringVar()
-        self.warning_label = tk.Label(root, textvariable=self.warning_var, fg="orange")
-        self.warning_label.grid(row=4, column=0, columnspan=2)
+        tk.Label(root, textvariable=self.warning_var, fg="orange").grid(row=4, column=0, columnspan=2)
 
-        # Status
         self.status_var = tk.StringVar(value="Stopped")
         self.status_label = tk.Label(root, textvariable=self.status_var, fg="gray")
         self.status_label.grid(row=5, column=0, columnspan=2, pady=(0, 10))
 
-        self.token_var.trace_add("write", lambda *_: self.validate_fields())
-        self.chat_id_var.trace_add("write", lambda *_: self.validate_fields())
-        self.path_var.trace_add("write", lambda *_: self.validate_fields())
+        for var in (self.token_var, self.chat_id_var, self.discord_var, self.path_var):
+            var.trace_add("write", lambda *_: self.validate_fields())
         self.validate_fields()
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def validate_fields(self):
-        missing = not self.token_var.get().strip() or not self.chat_id_var.get().strip() or not self.path_var.get().strip()
-        if missing:
+        has_telegram = bool(self.token_var.get().strip() and self.chat_id_var.get().strip())
+        has_discord = bool(self.discord_var.get().strip())
+        has_path = bool(self.path_var.get().strip())
+
+        if not has_path:
             self.toggle_btn.config(state="disabled")
-            self.warning_var.set("Please fill in all fields before starting.")
+            self.warning_var.set("Please enter the WoW Screenshots path.")
+        elif not has_telegram and not has_discord:
+            self.toggle_btn.config(state="disabled")
+            self.warning_var.set("Please configure at least one notification service.")
         else:
             self.toggle_btn.config(state="normal")
             self.warning_var.set("")
@@ -156,23 +194,35 @@ class App:
         config = {
             "bot_token": self.token_var.get().strip(),
             "chat_id": self.chat_id_var.get().strip(),
+            "discord_webhook": self.discord_var.get().strip(),
             "screenshots_path": self.path_var.get().strip(),
         }
         save_config(config)
         self.config = config
         self.set_status("Settings saved.", "green")
 
-    def send_test(self):
+    def test_telegram(self):
         token = self.token_var.get().strip()
         chat_id = self.chat_id_var.get().strip()
         if not token or not chat_id:
-            messagebox.showwarning("Missing fields", "Please enter your Bot Token and Chat ID first.")
+            messagebox.showwarning("Missing fields", "Please enter your Telegram Bot Token and Chat ID.")
             return
         try:
-            send_message(token, chat_id, "Queue Notifier is connected! You will be notified when your Solo Shuffle queue pops.")
-            messagebox.showinfo("Success", "Test message sent!")
+            send_telegram(token, chat_id, "Queue Notifier is connected! You will be notified when your Solo Shuffle queue pops.")
+            messagebox.showinfo("Telegram", "Test message sent successfully!")
         except Exception as e:
-            messagebox.showerror("Failed", f"Could not send message:\n{e}")
+            messagebox.showerror("Telegram", f"Could not send message:\n{e}")
+
+    def test_discord(self):
+        webhook_url = self.discord_var.get().strip()
+        if not webhook_url:
+            messagebox.showwarning("Missing fields", "Please enter your Discord Webhook URL.")
+            return
+        try:
+            send_discord(webhook_url, "Queue Notifier is connected! You will be notified when your Solo Shuffle queue pops.")
+            messagebox.showinfo("Discord", "Test message sent successfully!")
+        except Exception as e:
+            messagebox.showerror("Discord", f"Could not send message:\n{e}")
 
     def toggle(self):
         if self.observer and self.observer.is_alive():
@@ -181,17 +231,10 @@ class App:
             self.start_watcher()
 
     def start_watcher(self):
-        token = self.token_var.get().strip()
-        chat_id = self.chat_id_var.get().strip()
         screenshots_path = self.path_var.get().strip()
-
-        if not token or not chat_id or not screenshots_path:
-            messagebox.showwarning("Missing fields", "Please fill in all fields before starting.")
-            return
-
         Path(screenshots_path).mkdir(parents=True, exist_ok=True)
 
-        handler = ScreenshotHandler(token, chat_id, self.set_status)
+        handler = ScreenshotHandler(self.config, self.set_status)
         self.observer = Observer()
         self.observer.schedule(handler, path=screenshots_path, recursive=False)
         self.observer.start()
