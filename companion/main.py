@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import time
+import threading
 import tkinter as tk
 from tkinter import messagebox
 from pathlib import Path
@@ -11,6 +12,9 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
 CONFIG_FILE = Path(__file__).parent / "config.json"
+
+def log(msg):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 # ──────────────────────────────────────────────
 # Config
@@ -94,14 +98,17 @@ class ScreenshotHandler(PatternMatchingEventHandler):
         self.on_notification = on_notification
 
     def on_created(self, event):
-        timestamp = time.strftime("%H:%M:%S")
+        log("Queue pop detected — sending notification...")
         try:
             send_notifications(self.config, "Your Solo Shuffle queue has popped! Accept it!")
-            self.on_notification(f"[{timestamp}] Notification sent.")
+            log("Notification sent successfully.")
+            self.on_notification(f"[{time.strftime('%H:%M:%S')}] Notification sent.")
         except Exception as e:
-            self.on_notification(f"[{timestamp}] Failed to send: {e}")
+            log(f"Failed to send notification: {e}")
+            self.on_notification(f"[{time.strftime('%H:%M:%S')}] Failed to send: {e}")
         try:
             os.remove(event.src_path)
+            log("Screenshot cleaned up.")
         except Exception:
             pass
 
@@ -199,6 +206,7 @@ class App:
         }
         save_config(config)
         self.config = config
+        log("Settings saved.")
         self.set_status("Settings saved.", "green")
 
     def test_telegram(self):
@@ -234,21 +242,39 @@ class App:
         screenshots_path = self.path_var.get().strip()
         Path(screenshots_path).mkdir(parents=True, exist_ok=True)
 
-        handler = ScreenshotHandler(self.config, self.set_status)
+        current_config = {
+            "bot_token": self.token_var.get().strip(),
+            "chat_id": self.chat_id_var.get().strip(),
+            "discord_webhook": self.discord_var.get().strip(),
+            "screenshots_path": screenshots_path,
+        }
+
+        handler = ScreenshotHandler(current_config, self.set_status)
         self.observer = Observer()
         self.observer.schedule(handler, path=screenshots_path, recursive=False)
         self.observer.start()
 
         self.toggle_btn.config(text="Stop", bg="#f44336")
         self.set_status("Running — waiting for queue pop...", "green")
+        log(f"Watcher started. Monitoring: {screenshots_path}")
+
+        self._heartbeat_stop = threading.Event()
+        threading.Thread(target=self._heartbeat, daemon=True).start()
+
+    def _heartbeat(self):
+        while not self._heartbeat_stop.wait(60):
+            log("Still running — waiting for queue pop...")
 
     def stop_watcher(self):
+        if hasattr(self, "_heartbeat_stop"):
+            self._heartbeat_stop.set()
         if self.observer:
             self.observer.stop()
             self.observer.join()
             self.observer = None
         self.toggle_btn.config(text="Start", bg="#4CAF50")
         self.set_status("Stopped", "gray")
+        log("Watcher stopped.")
 
     def set_status(self, msg, color="black"):
         self.status_var.set(msg)
@@ -263,6 +289,19 @@ class App:
 # ──────────────────────────────────────────────
 
 if __name__ == "__main__":
+    print("=" * 50)
+    print("  Queue Notifier")
+    print("=" * 50)
+    print()
+    print("  !! Do not close this window !!")
+    print("  It must stay open while you play.")
+    print("  Use the Queue Notifier window to")
+    print("  configure your settings and start/stop.")
+    print()
+    log("Starting up...")
+
     root = tk.Tk()
     app = App(root)
     root.mainloop()
+
+    log("Application closed.")

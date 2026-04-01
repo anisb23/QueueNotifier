@@ -17,7 +17,9 @@ local function sendNotification()
         originalFormat = "jpeg"
     end
     Screenshot()
-    SetCVar("screenshotFormat", originalFormat)
+    C_Timer.After(1, function()
+        SetCVar("screenshotFormat", originalFormat)
+    end)
 end
 
 hooksecurefunc("PVPReadyDialog_Display", function(_, battlefieldId)
